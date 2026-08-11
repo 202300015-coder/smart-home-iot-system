@@ -1,0 +1,12 @@
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+#alerts-list {
+  max-height: 250px;
+  overflow-y: auto;
+}
