@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const cors = require('cors');
 const mqtt = require('mqtt');
 const { createClient } = require('@supabase/supabase-js');
@@ -10,8 +11,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use(express.static(path.join(__dirname, '../frontend')));
+
 app.get('/', (req, res) => {
-  res.send('Backend IoT Smart Home está activo y funcionando.');
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
 const server = http.createServer(app);
