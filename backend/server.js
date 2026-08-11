@@ -10,7 +10,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Endpoint de salud para que Render verifique que el servicio está vivo
 app.get('/', (req, res) => {
   res.send('Backend IoT Smart Home está activo y funcionando.');
 });
@@ -23,6 +22,49 @@ const io = new Server(server, {
 let history = [];
 let currentTemp = null;
 let currentHum = null;
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
+// ===================================================
+// INICIALIZACIÓN: CARGAR HISTORIAL DESDE SUPABASE
+// ===================================================
+async function initHistoryFromDB() {
+  try {
+    const { data, error } = await supabase
+      .from('telemetria')
+      .select('tipo, valor, created_at')
+      .in('tipo', ['temperatura', 'humedad'])
+      .order('created_at', { ascending: false })
+      .limit(60);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      const records = data.reverse();
+      const grouped = {};
+
+      records.forEach(row => {
+        // Agrupar lecturas en bloques de 5 segundos
+        const timeKey = Math.floor(new Date(row.created_at).getTime() / 5000) * 5000;
+        if (!grouped[timeKey]) {
+          grouped[timeKey] = {
+            at: new Date(timeKey).toISOString(),
+            temperature: null,
+            humidity: null
+          };
+        }
+        if (row.tipo === 'temperatura') grouped[timeKey].temperature = row.valor;
+        if (row.tipo === 'humedad') grouped[timeKey].humidity = row.valor;
+      });
+
+      history = Object.values(grouped).slice(-30);
+      console.log(`📦 [DATABASE] Historial inicial cargado: ${history.length} registros.`);
+    }
+  } catch (err) {
+    console.error('⚠️ [SUPABASE INIT ERROR]:', err.message);
+  }
+}
+initHistoryFromDB();
 
 function emitChartUpdate() {
   io.emit('mqtt_data', {
@@ -37,10 +79,11 @@ function emitChartUpdate() {
 
 function updateChartHistory() {
   const latest = history[history.length - 1];
+  const NOW_WINDOW_MS = 5000; // Ventana de 5 segundos
 
-  if (latest && (Date.now() - new Date(latest.at).getTime() < 4000)) {
-    latest.temperature = currentTemp;
-    latest.humidity = currentHum;
+  if (latest && (Date.now() - new Date(latest.at).getTime() < NOW_WINDOW_MS)) {
+    if (currentTemp !== null) latest.temperature = currentTemp;
+    if (currentHum !== null) latest.humidity = currentHum;
   } else {
     history.push({
       at: new Date().toISOString(),
@@ -57,12 +100,7 @@ function updateChartHistory() {
 }
 
 // ===================================================
-// 1. CONEXIÓN A SUPABASE
-// ===================================================
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
-
-// ===================================================
-// 2. CONEXIÓN A HIVEMQ CLOUD (MQTT)
+// MQTT CLIENT (HIVEMQ)
 // ===================================================
 const mqttClient = mqtt.connect(`mqtts://${process.env.MQTT_HOST}:${process.env.MQTT_PORT}`, {
   username: process.env.MQTT_USER,
@@ -72,11 +110,8 @@ const mqttClient = mqtt.connect(`mqtts://${process.env.MQTT_HOST}:${process.env.
 
 mqttClient.on('connect', () => {
   console.log('✅ [MQTT] Conectado a HiveMQ Cloud');
-  
   mqttClient.subscribe('CASA/#', (err) => {
-    if (!err) {
-      console.log('📡 [MQTT] Suscrito exitosamente a CASA/#');
-    }
+    if (!err) console.log('📡 [MQTT] Suscrito exitosamente a CASA/#');
   });
 });
 
@@ -84,18 +119,13 @@ mqttClient.on('error', (err) => {
   console.error('❌ [MQTT ERROR]:', err.message);
 });
 
-// ===================================================
-// 3. PROCESAMIENTO Y PERSISTENCIA EN TIEMPO REAL
-// ===================================================
 mqttClient.on('message', async (topic, message) => {
   const payload = message.toString();
   console.log(`📩 [MQTT RECIBIDO] Tópico: ${topic} | Payload: ${payload}`);
 
-  // Emitir por WebSockets a todos los clientes conectador
   io.emit('mqtt_data', { topic, payload });
 
   try {
-    // A. PROCESAR ALERTAS
     if (topic === 'CASA/FLAMA') {
       await supabase.from('alertas').insert([{ tipo_alerta: 'FLAMA', descripcion: 'Fuego / Llama detectada' }]);
     } 
@@ -108,32 +138,51 @@ mqttClient.on('message', async (topic, message) => {
     else if (topic === 'CASA/SONIDO') {
       await supabase.from('alertas').insert([{ tipo_alerta: 'SONIDO', descripcion: 'Ruido fuerte detectado' }]);
     }
-    // B. PROCESAR TELEMETRÍA
+    // FILTRADO Y VALIDACIÓN DE RANGOS DE TELEMETRÍA
     else if (topic === 'CASA/TEM') {
-      currentTemp = parseFloat(payload);
-      await supabase.from('telemetria').insert([{ tipo: 'temperatura', valor: currentTemp }]);
-      updateChartHistory();
+      const val = parseFloat(payload);
+      if (!isNaN(val) && val >= -10 && val <= 70) {
+        currentTemp = val;
+        await supabase.from('telemetria').insert([{ tipo: 'temperatura', valor: currentTemp }]);
+        updateChartHistory();
+      } else {
+        console.warn(`⚠️ [TEMPERATURA DESCARTADA] Valor fuera de rango: ${val}`);
+      }
     } 
     else if (topic === 'CASA/HUM') {
-      currentHum = parseFloat(payload);
-      await supabase.from('telemetria').insert([{ tipo: 'humedad', valor: currentHum }]);
-      updateChartHistory();
+      const val = parseFloat(payload);
+      if (!isNaN(val) && val >= 0 && val <= 100) {
+        currentHum = val;
+        await supabase.from('telemetria').insert([{ tipo: 'humedad', valor: currentHum }]);
+        updateChartHistory();
+      } else {
+        console.warn(`⚠️ [HUMEDAD DESCARTADA] Valor fuera de rango: ${val}`);
+      }
     } 
     else if (topic === 'CASA/ESTADO_LUZ') {
       const valLuz = parseInt(payload);
-      await supabase.from('telemetria').insert([{ tipo: 'luz', valor: valLuz }]);
-      await supabase.from('estado_sistema').update({ nivel_luz: valLuz, updated_at: new Date() }).eq('id', 1);
+      if (!isNaN(valLuz)) {
+        await supabase.from('telemetria').insert([{ tipo: 'luz', valor: valLuz }]);
+        await supabase.from('estado_sistema').update({ nivel_luz: valLuz, updated_at: new Date() }).eq('id', 1);
+      }
     }
   } catch (error) {
     console.error('❌ [SUPABASE ERROR]:', error.message);
   }
 });
 
-// ===================================================
-// 4. CANAL BIDIRECCIONAL WEBSOCKETS (FRONTEND -> BACKEND -> MQTT)
-// ===================================================
 io.on('connection', (socket) => {
   console.log(`🔌 [SOCKET.IO] Cliente conectado ID: ${socket.id}`);
+
+  // Enviar historial inicial al conectar un nuevo cliente
+  socket.emit('mqtt_data', {
+    topic: 'CHART_UPDATE',
+    payload: {
+      temperature: currentTemp,
+      humidity: currentHum,
+      history: history.slice(-30)
+    }
+  });
 
   socket.on('set_luz', (nuevoBrillo) => {
     console.log(`💡 [SOCKET.IO -> MQTT] Ajustando luz a: ${nuevoBrillo}`);
@@ -145,11 +194,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// ===================================================
-// 5. INICIAR SERVIDOR EN PUERTO DINÁMICO (RENDER)
-// ===================================================
 const PORT = process.env.PORT || 3000;
-
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 [BACKEND] Servidor ejecutándose exitosamente en el puerto ${PORT}`);
+  console.log(`🚀 [BACKEND] Servidor ejecutándose en el puerto ${PORT}`);
 });

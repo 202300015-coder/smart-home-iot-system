@@ -1,159 +1,154 @@
-// Conexión directa a tu servidor desplegado en Render
-const BACKEND_URL = 'https://smart-home-iot-system.onrender.com';
-const socket = io(BACKEND_URL);
+const socket = io();
 
-// Elementos del DOM
-const statusElement = document.getElementById('status');
-const tempElement = document.getElementById('temp');
-const humElement = document.getElementById('hum');
-const luzValueElement = document.getElementById('luz-val');
+// Elementos DOM
+const tempEl = document.getElementById('temp');
+const humEl = document.getElementById('hum');
+const luzValEl = document.getElementById('luz-val');
 const sliderLuz = document.getElementById('slider-luz');
-const alertsList = document.getElementById('alerts-list');
-const chartPlaceholder = document.getElementById('chart-placeholder');
-const temperatureLine = document.getElementById('temperatureLine');
-const humidityLine = document.getElementById('humidityLine');
-const tempMaxValue = document.getElementById('tempMaxValue');
-const tempMidValue = document.getElementById('tempMidValue');
-const tempMinValue = document.getElementById('tempMinValue');
-const humMaxValue = document.getElementById('humMaxValue');
-const humMidValue = document.getElementById('humMidValue');
-const humMinValue = document.getElementById('humMinValue');
+const statusEl = document.getElementById('status');
 
-function scaleFor(values) {
-  const valid = values.filter(v => Number.isFinite(v));
-  if (!valid.length) return null;
-  let min = Math.min(...valid);
-  let max = Math.max(...valid);
-  if (min === max) {
-    const padding = Math.max(Math.abs(min) * 0.04, 1);
-    min -= padding;
-    max += padding;
-  }
-  return { min, max, range: max - min };
-}
+// Elementos de la Gráfica SVG
+const tempPath = document.getElementById('temperatureLine');
+const humPath = document.getElementById('humidityLine');
+const placeholder = document.getElementById('chart-placeholder');
 
-function lineFor(values, scale) {
-  if (!scale || values.length < 2) return '';
-  return values.map((val, idx) => {
-    const x = (idx / (values.length - 1)) * 700;
-    const y = 185 - ((val - scale.min) / scale.range) * 145;
-    return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
-  }).join(' ');
-}
+// Textos de min, mid, max
+const tempMax = document.getElementById('tempMaxValue');
+const tempMid = document.getElementById('tempMidValue');
+const tempMin = document.getElementById('tempMinValue');
+const humMax = document.getElementById('humMaxValue');
+const humMid = document.getElementById('humMidValue');
+const humMin = document.getElementById('humMinValue');
 
-function setMetricValue(element, value) {
-  if (!element) return;
-  element.textContent = Number.isFinite(value) ? value.toFixed(1) : '--';
-}
-
-function updateScaleLabels(prefix, scale) {
-  const maxElement = document.getElementById(`${prefix}MaxValue`);
-  const midElement = document.getElementById(`${prefix}MidValue`);
-  const minElement = document.getElementById(`${prefix}MinValue`);
-
-  if (!scale) {
-    setMetricValue(maxElement, NaN);
-    setMetricValue(midElement, NaN);
-    setMetricValue(minElement, NaN);
-    return;
-  }
-
-  setMetricValue(maxElement, scale.max);
-  setMetricValue(midElement, (scale.max + scale.min) / 2);
-  setMetricValue(minElement, scale.min);
-}
-
-function renderChartState(history = []) {
-  const readings = history.filter(entry =>
-    Number.isFinite(entry.temperature) && Number.isFinite(entry.humidity)
-  );
-
-  const temperatures = readings.map(r => r.temperature);
-  const humidity = readings.map(r => r.humidity);
-
-  const tempScale = scaleFor(temperatures);
-  const humScale = scaleFor(humidity);
-
-  if (readings.length < 2) {
-    if (chartPlaceholder) {
-      chartPlaceholder.style.display = '';
-    }
-    if (temperatureLine) {
-      temperatureLine.setAttribute('d', '');
-    }
-    if (humidityLine) {
-      humidityLine.setAttribute('d', '');
-    }
-    updateScaleLabels('temp', null);
-    updateScaleLabels('hum', null);
-    return;
-  }
-
-  if (chartPlaceholder) {
-    chartPlaceholder.style.display = 'none';
-  }
-
-  if (temperatureLine) {
-    temperatureLine.setAttribute('d', lineFor(temperatures, tempScale));
-  }
-
-  if (humidityLine) {
-    humidityLine.setAttribute('d', lineFor(humidity, humScale));
-  }
-
-  updateScaleLabels('temp', tempScale);
-  updateScaleLabels('hum', humScale);
-}
-
-function formatReading(value, suffix) {
-  return Number.isFinite(value) ? `${value.toFixed(1)} ${suffix}` : '--';
-}
-
-// Estado de conexión WebSocket
+// Eventos de Socket.io
 socket.on('connect', () => {
-  console.log('✅ Conectado al backend en Render');
-  statusElement.textContent = 'Conectado';
-  statusElement.className = 'badge bg-success';
+  if (statusEl) {
+    statusEl.setAttribute('data-state', 'connected');
+    statusEl.querySelector('b').textContent = 'Conectado';
+  }
 });
 
 socket.on('disconnect', () => {
-  console.warn('❌ Desconectado del backend');
-  statusElement.textContent = 'Desconectado';
-  statusElement.className = 'badge bg-danger';
-});
-
-// Recibir datos MQTT transmitidos por Socket.io
-socket.on('mqtt_data', (data) => {
-  const { topic, payload } = data;
-  console.log(`Data recibida [${topic}]:`, payload);
-
-  if (topic === 'CHART_UPDATE') {
-    tempElement.textContent = formatReading(payload.temperature, '°C');
-    humElement.textContent = formatReading(payload.humidity, '%');
-    renderChartState(Array.isArray(payload.history) ? payload.history : []);
-  } else if (topic === 'CASA/TEM') {
-    tempElement.textContent = formatReading(parseFloat(payload), '°C');
-  } else if (topic === 'CASA/HUM') {
-    humElement.textContent = formatReading(parseFloat(payload), '%');
-  } else if (topic === 'CASA/ESTADO_LUZ') {
-    luzValueElement.textContent = `${payload}%`;
-    sliderLuz.value = payload;
-  } else if (['CASA/FLAMA', 'CASA/TERREMOTO', 'CASA/PROX', 'CASA/SONIDO'].includes(topic)) {
-    agregarAlerta(topic, payload);
+  if (statusEl) {
+    statusEl.setAttribute('data-state', 'disconnected');
+    statusEl.querySelector('b').textContent = 'Desconectado';
   }
 });
 
-// Control de iluminación (Frontend -> Backend -> MQTT)
-sliderLuz.addEventListener('change', (e) => {
-  const valor = e.target.value;
-  luzValueElement.textContent = `${valor}%`;
-  socket.emit('set_luz', valor);
+socket.on('mqtt_data', (data) => {
+  const { topic, payload } = data;
+
+  if (topic === 'CHART_UPDATE') {
+    if (payload.temperature !== null && tempEl) tempEl.textContent = payload.temperature;
+    if (payload.humidity !== null && humEl) humEl.textContent = payload.humidity;
+    renderChart(payload.history || []);
+  } else if (topic === 'CASA/TEM' && tempEl) {
+    tempEl.textContent = payload;
+  } else if (topic === 'CASA/HUM' && humEl) {
+    humEl.textContent = payload;
+  } else if (topic === 'CASA/ESTADO_LUZ' && luzValEl) {
+    luzValEl.textContent = payload;
+  }
 });
 
-function agregarAlerta(topico, mensaje) {
-  const li = document.createElement('li');
-  li.className = 'list-group-item list-group-item-danger d-flex justify-content-between align-items-center';
-  const fecha = new Date().toLocaleTimeString();
-  li.innerHTML = `<strong>[${topico}]</strong> ${mensaje} <span class="badge bg-dark">${fecha}</span>`;
-  alertsList.prepend(li);
+// Enviar comandos de dimerización
+if (sliderLuz) {
+  sliderLuz.addEventListener('change', (e) => {
+    socket.emit('set_luz', e.target.value);
+  });
+}
+
+// ===================================================
+// LÓGICA DE ESCALA Y BÉZIER PARA GRÁFICA SVG
+// ===================================================
+function scaleFor(values, minSpan = 2.0) {
+  const valid = values.filter(v => v !== null && !isNaN(v));
+  if (valid.length === 0) return { min: 0, max: 10, range: 10 };
+
+  let min = Math.min(...valid);
+  let max = Math.max(...valid);
+
+  // Forzar un rango mínimo absoluto para evitar líneas totalmente planas o oscilaciones gigantes
+  if (max - min < minSpan) {
+    const center = (max + min) / 2;
+    min = center - (minSpan / 2);
+    max = center + (minSpan / 2);
+  }
+
+  return { min, max, range: max - min };
+}
+
+// Genera un D-path suavizado mediante curvas Bézier cúbicas
+function lineForBezier(points) {
+  if (points.length === 0) return '';
+  if (points.length === 1) return `M ${points[0].x},${points[0].y}`;
+
+  let d = `M ${points[0].x},${points[0].y}`;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i === 0 ? i : i - 1];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+    d += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+
+  return d;
+}
+
+function renderChart(history) {
+  if (!history || history.length < 2) {
+    if (placeholder) placeholder.style.display = 'block';
+    return;
+  }
+
+  if (placeholder) placeholder.style.display = 'none';
+
+  const width = 700;
+  const height = 220;
+  const paddingY = 30;
+  const usableHeight = height - (paddingY * 2);
+
+  const temps = history.map(h => h.temperature);
+  const hums = history.map(h => h.humidity);
+
+  const scaleTemp = scaleFor(temps, 2.0); // Mínimo 2°C de ventana
+  const scaleHum = scaleFor(hums, 5.0);   // Mínimo 5% de ventana
+
+  // Actualizar métricas textuales en el SVG
+  if (tempMax) tempMax.textContent = scaleTemp.max.toFixed(1) + '°C';
+  if (tempMid) tempMid.textContent = ((scaleTemp.max + scaleTemp.min) / 2).toFixed(1) + '°C';
+  if (tempMin) tempMin.textContent = scaleTemp.min.toFixed(1) + '°C';
+
+  if (humMax) humMax.textContent = scaleHum.max.toFixed(1) + '%';
+  if (humMid) humMid.textContent = ((scaleHum.max + scaleHum.min) / 2).toFixed(1) + '%';
+  if (humMin) humMin.textContent = scaleHum.min.toFixed(1) + '%';
+
+  const stepX = width / (history.length - 1);
+
+  const tempPoints = [];
+  const humPoints = [];
+
+  history.forEach((item, index) => {
+    const x = index * stepX;
+
+    if (item.temperature !== null) {
+      const yTemp = height - paddingY - ((item.temperature - scaleTemp.min) / scaleTemp.range) * usableHeight;
+      tempPoints.push({ x, y: yTemp });
+    }
+
+    if (item.humidity !== null) {
+      const yHum = height - paddingY - ((item.humidity - scaleHum.min) / scaleHum.range) * usableHeight;
+      humPoints.push({ x, y: yHum });
+    }
+  });
+
+  if (tempPath) tempPath.setAttribute('d', lineForBezier(tempPoints));
+  if (humPath) humPath.setAttribute('d', lineForBezier(humPoints));
 }
