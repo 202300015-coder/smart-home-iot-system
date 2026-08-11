@@ -282,6 +282,115 @@
 
 
         <!-- =========================================
+             GRÁFICA DE TELEMETRÍA
+        ========================================== -->
+        <section class="panel chart-panel">
+
+            <div class="panel-title">
+
+                <div class="panel-heading">
+
+                    <div class="panel-icon">
+                        ⌁
+                    </div>
+
+                    <div>
+
+                        <p class="eyebrow">
+                            TELEMETRÍA EN VIVO
+                        </p>
+
+                        <h2>
+                            Temperatura y Humedad
+                        </h2>
+
+                    </div>
+
+                </div>
+
+                <div class="log-status">
+                    <span></span>
+                    SVG dinámico
+                </div>
+
+            </div>
+
+            <div class="chart-wrap">
+
+                <svg
+                    id="telemetry-chart"
+                    class="telemetry-chart"
+                    viewBox="0 0 700 220"
+                    role="img"
+                    aria-labelledby="chart-title chart-desc"
+                >
+
+                    <title id="chart-title">
+                        Gráfica en tiempo real de temperatura y humedad
+                    </title>
+
+                    <desc id="chart-desc">
+                        Muestra las últimas lecturas válidas de temperatura y humedad con escalas independientes.
+                    </desc>
+
+                    <text
+                        id="chart-placeholder"
+                        x="350"
+                        y="112"
+                        text-anchor="middle"
+                        class="chart-placeholder"
+                    >
+                        Esperando suficientes lecturas...
+                    </text>
+
+                    <path
+                        id="temperatureLine"
+                        fill="none"
+                    ></path>
+
+                    <path
+                        id="humidityLine"
+                        fill="none"
+                    ></path>
+
+                    <g class="chart-metrics chart-metrics-temp">
+                        <text x="20" y="24" class="chart-metric">
+                            <tspan class="chart-metric-label">Temperatura máx</tspan>
+                            <tspan id="tempMaxValue" class="chart-metric-value" x="20" dy="15">--</tspan>
+                        </text>
+                        <text x="20" y="58" class="chart-metric">
+                            <tspan class="chart-metric-label">Temperatura media</tspan>
+                            <tspan id="tempMidValue" class="chart-metric-value" x="20" dy="15">--</tspan>
+                        </text>
+                        <text x="20" y="92" class="chart-metric">
+                            <tspan class="chart-metric-label">Temperatura mín</tspan>
+                            <tspan id="tempMinValue" class="chart-metric-value" x="20" dy="15">--</tspan>
+                        </text>
+                    </g>
+
+                    <g class="chart-metrics chart-metrics-hum">
+                        <text x="540" y="24" class="chart-metric">
+                            <tspan class="chart-metric-label">Humedad máx</tspan>
+                            <tspan id="humMaxValue" class="chart-metric-value" x="540" dy="15">--</tspan>
+                        </text>
+                        <text x="540" y="58" class="chart-metric">
+                            <tspan class="chart-metric-label">Humedad media</tspan>
+                            <tspan id="humMidValue" class="chart-metric-value" x="540" dy="15">--</tspan>
+                        </text>
+                        <text x="540" y="92" class="chart-metric">
+                            <tspan class="chart-metric-label">Humedad mín</tspan>
+                            <tspan id="humMinValue" class="chart-metric-value" x="540" dy="15">--</tspan>
+                        </text>
+                    </g>
+
+                </svg>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================================
              ALERTAS
         ========================================== -->
         <section class="panel alerts-panel">

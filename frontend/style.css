@@ -1607,3 +1607,105 @@ body::before {
     background: var(--green);
 
 }
+
+
+/* =========================================================
+   GRÁFICA DE TELEMETRÍA
+========================================================= */
+
+.chart-panel {
+
+    margin-bottom: 20px;
+
+    overflow: hidden;
+
+}
+
+
+.chart-wrap {
+
+    padding: 0 18px 18px;
+
+}
+
+
+.telemetry-chart {
+
+    display: block;
+
+    width: 100%;
+
+    height: auto;
+
+    overflow: visible;
+
+}
+
+
+.chart-placeholder {
+
+    fill: var(--text-dim);
+
+    font-family: var(--font-mono);
+
+    font-size: 15px;
+
+    letter-spacing: 0.02em;
+
+}
+
+
+#temperatureLine,
+#humidityLine {
+
+    stroke-width: 3;
+
+    stroke-linecap: round;
+
+    stroke-linejoin: round;
+
+}
+
+
+#temperatureLine {
+
+    stroke: var(--green);
+
+    filter: drop-shadow(0 0 8px rgba(62, 207, 142, 0.18));
+
+}
+
+
+#humidityLine {
+
+    stroke: #68d6ff;
+
+    filter: drop-shadow(0 0 8px rgba(104, 214, 255, 0.16));
+
+}
+
+
+.chart-metric {
+
+    fill: var(--text-soft);
+
+    font-family: var(--font-mono);
+
+    font-size: 10px;
+
+    letter-spacing: 0.06em;
+
+    text-transform: uppercase;
+
+}
+
+
+.chart-metric-value {
+
+    fill: var(--text);
+
+    font-size: 13px;
+
+    letter-spacing: 0.02em;
+
+}

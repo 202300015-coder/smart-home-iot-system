@@ -20,6 +20,42 @@ const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
+let history = [];
+let currentTemp = null;
+let currentHum = null;
+
+function emitChartUpdate() {
+  io.emit('mqtt_data', {
+    topic: 'CHART_UPDATE',
+    payload: {
+      temperature: currentTemp,
+      humidity: currentHum,
+      history: history.slice(-30)
+    }
+  });
+}
+
+function updateChartHistory() {
+  const latest = history[history.length - 1];
+
+  if (latest && (Date.now() - new Date(latest.at).getTime() < 4000)) {
+    latest.temperature = currentTemp;
+    latest.humidity = currentHum;
+  } else {
+    history.push({
+      at: new Date().toISOString(),
+      temperature: currentTemp,
+      humidity: currentHum
+    });
+
+    if (history.length > 60) {
+      history = history.slice(-60);
+    }
+  }
+
+  emitChartUpdate();
+}
+
 // ===================================================
 // 1. CONEXIÓN A SUPABASE
 // ===================================================
@@ -74,10 +110,14 @@ mqttClient.on('message', async (topic, message) => {
     }
     // B. PROCESAR TELEMETRÍA
     else if (topic === 'CASA/TEM') {
-      await supabase.from('telemetria').insert([{ tipo: 'temperatura', valor: parseFloat(payload) }]);
+      currentTemp = parseFloat(payload);
+      await supabase.from('telemetria').insert([{ tipo: 'temperatura', valor: currentTemp }]);
+      updateChartHistory();
     } 
     else if (topic === 'CASA/HUM') {
-      await supabase.from('telemetria').insert([{ tipo: 'humedad', valor: parseFloat(payload) }]);
+      currentHum = parseFloat(payload);
+      await supabase.from('telemetria').insert([{ tipo: 'humedad', valor: currentHum }]);
+      updateChartHistory();
     } 
     else if (topic === 'CASA/ESTADO_LUZ') {
       const valLuz = parseInt(payload);
