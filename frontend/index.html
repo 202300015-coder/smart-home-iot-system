@@ -279,115 +279,374 @@
             </article>
 
         </section>
+       <!-- INICIO DE LA GRÁFICA DE TELEMETRÍA -->
+       <!-- =========================================
+           GRÁFICA DE TELEMETRÍA
+       ========================================== -->
+  <!-- =========================================
+     GRÁFICA DE TELEMETRÍA
+========================================== -->
+<section class="panel chart-panel">
+
+    <!-- Header -->
+    <div class="chart-header">
+
+        <div class="chart-title-area">
+
+            <div class="panel-icon chart-icon">
+                ⌁
+            </div>
+
+            <div>
+
+                <p class="eyebrow">
+                    TELEMETRÍA EN VIVO
+                </p>
+
+                <h2>
+                    Temperatura y Humedad
+                </h2>
+
+            </div>
+
+        </div>
 
 
-        <!-- =========================================
-             GRÁFICA DE TELEMETRÍA
-        ========================================== -->
-        <section class="panel chart-panel">
+        <!-- Leyenda -->
+        <div class="chart-legend">
 
-            <div class="panel-title">
+            <div class="legend-item">
+                <span class="legend-line temperature"></span>
+                <span>Temperatura</span>
+            </div>
 
-                <div class="panel-heading">
+            <div class="legend-item">
+                <span class="legend-line humidity"></span>
+                <span>Humedad</span>
+            </div>
 
-                    <div class="panel-icon">
-                        ⌁
-                    </div>
+            <div class="chart-live">
+                <span></span>
+                EN VIVO
+            </div>
 
-                    <div>
+        </div>
 
-                        <p class="eyebrow">
-                            TELEMETRÍA EN VIVO
-                        </p>
+    </div>
 
-                        <h2>
-                            Temperatura y Humedad
-                        </h2>
 
-                    </div>
+    <!-- Estadísticas -->
+    <div class="chart-stats">
 
+        <!-- Temperatura -->
+        <div class="chart-stat">
+
+            <div class="stat-label">
+                TEMPERATURA
+            </div>
+
+            <div class="stat-values">
+
+                <div>
+                    <span>MÁX</span>
+                    <strong id="tempMaxValue">--</strong>
                 </div>
 
-                <div class="log-status">
-                    <span></span>
-                    SVG dinámico
+                <div>
+                    <span>PROM</span>
+                    <strong id="tempMidValue">--</strong>
+                </div>
+
+                <div>
+                    <span>MÍN</span>
+                    <strong id="tempMinValue">--</strong>
                 </div>
 
             </div>
 
-            <div class="chart-wrap">
+        </div>
 
-                <svg
-                    id="telemetry-chart"
-                    class="telemetry-chart"
-                    viewBox="0 0 700 220"
-                    role="img"
-                    aria-labelledby="chart-title chart-desc"
+
+        <!-- Humedad -->
+        <div class="chart-stat">
+
+            <div class="stat-label humidity-label">
+                HUMEDAD
+            </div>
+
+            <div class="stat-values">
+
+                <div>
+                    <span>MÁX</span>
+                    <strong id="humMaxValue">--</strong>
+                </div>
+
+                <div>
+                    <span>PROM</span>
+                    <strong id="humMidValue">--</strong>
+                </div>
+
+                <div>
+                    <span>MÍN</span>
+                    <strong id="humMinValue">--</strong>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Gráfica -->
+    <div class="chart-wrap">
+
+        <svg
+            id="telemetry-chart"
+            class="telemetry-chart"
+            viewBox="0 0 1000 320"
+            preserveAspectRatio="none"
+            role="img"
+            aria-labelledby="chart-title chart-desc"
+        >
+
+            <title id="chart-title">
+                Gráfica en tiempo real de temperatura y humedad
+            </title>
+
+            <desc id="chart-desc">
+                Muestra las últimas lecturas válidas de temperatura y humedad.
+            </desc>
+
+
+            <!-- =========================
+                 DEFINICIONES
+            ========================== -->
+
+            <defs>
+
+                <!-- Gradiente temperatura -->
+                <linearGradient
+                    id="temperatureGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
                 >
+                    <stop
+                        offset="0%"
+                        stop-color="#3ecf8e"
+                        stop-opacity="0.18"
+                    />
 
-                    <title id="chart-title">
-                        Gráfica en tiempo real de temperatura y humedad
-                    </title>
+                    <stop
+                        offset="100%"
+                        stop-color="#3ecf8e"
+                        stop-opacity="0"
+                    />
+                </linearGradient>
 
-                    <desc id="chart-desc">
-                        Muestra las últimas lecturas válidas de temperatura y humedad con escalas independientes.
-                    </desc>
 
-                    <text
-                        id="chart-placeholder"
-                        x="350"
-                        y="112"
-                        text-anchor="middle"
-                        class="chart-placeholder"
-                    >
-                        Esperando suficientes lecturas...
-                    </text>
+                <!-- Gradiente humedad -->
+                <linearGradient
+                    id="humidityGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                >
+                    <stop
+                        offset="0%"
+                        stop-color="#61d8ff"
+                        stop-opacity="0.12"
+                    />
 
-                    <path
-                        id="temperatureLine"
-                        fill="none"
-                    ></path>
+                    <stop
+                        offset="100%"
+                        stop-color="#61d8ff"
+                        stop-opacity="0"
+                    />
+                </linearGradient>
 
-                    <path
-                        id="humidityLine"
-                        fill="none"
-                    ></path>
 
-                    <g class="chart-metrics chart-metrics-temp">
-                        <text x="20" y="24" class="chart-metric">
-                            <tspan class="chart-metric-label">Temperatura máx</tspan>
-                            <tspan id="tempMaxValue" class="chart-metric-value" x="20" dy="15">--</tspan>
-                        </text>
-                        <text x="20" y="58" class="chart-metric">
-                            <tspan class="chart-metric-label">Temperatura media</tspan>
-                            <tspan id="tempMidValue" class="chart-metric-value" x="20" dy="15">--</tspan>
-                        </text>
-                        <text x="20" y="92" class="chart-metric">
-                            <tspan class="chart-metric-label">Temperatura mín</tspan>
-                            <tspan id="tempMinValue" class="chart-metric-value" x="20" dy="15">--</tspan>
-                        </text>
-                    </g>
+                <!-- Glow temperatura -->
+                <filter
+                    id="temperatureGlow"
+                    x="-30%"
+                    y="-30%"
+                    width="160%"
+                    height="160%"
+                >
+                    <feGaussianBlur
+                        stdDeviation="4"
+                        result="blur"
+                    />
 
-                    <g class="chart-metrics chart-metrics-hum">
-                        <text x="540" y="24" class="chart-metric">
-                            <tspan class="chart-metric-label">Humedad máx</tspan>
-                            <tspan id="humMaxValue" class="chart-metric-value" x="540" dy="15">--</tspan>
-                        </text>
-                        <text x="540" y="58" class="chart-metric">
-                            <tspan class="chart-metric-label">Humedad media</tspan>
-                            <tspan id="humMidValue" class="chart-metric-value" x="540" dy="15">--</tspan>
-                        </text>
-                        <text x="540" y="92" class="chart-metric">
-                            <tspan class="chart-metric-label">Humedad mín</tspan>
-                            <tspan id="humMinValue" class="chart-metric-value" x="540" dy="15">--</tspan>
-                        </text>
-                    </g>
+                    <feMerge>
+                        <feMergeNode in="blur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
 
-                </svg>
 
-            </div>
+                <!-- Glow humedad -->
+                <filter
+                    id="humidityGlow"
+                    x="-30%"
+                    y="-30%"
+                    width="160%"
+                    height="160%"
+                >
+                    <feGaussianBlur
+                        stdDeviation="4"
+                        result="blur"
+                    />
 
-        </section>
+                    <feMerge>
+                        <feMergeNode in="blur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+
+            </defs>
+
+
+            <!-- =========================
+                 ÁREA DE GRÁFICA
+            ========================== -->
+
+            <rect
+                class="chart-background"
+                x="0"
+                y="0"
+                width="1000"
+                height="320"
+                rx="10"
+            />
+
+
+            <!-- Líneas horizontales -->
+            <g class="chart-grid">
+
+                <line x1="0" y1="55" x2="1000" y2="55"/>
+                <line x1="0" y1="110" x2="1000" y2="110"/>
+                <line x1="0" y1="165" x2="1000" y2="165"/>
+                <line x1="0" y1="220" x2="1000" y2="220"/>
+                <line x1="0" y1="275" x2="1000" y2="275"/>
+
+            </g>
+
+
+            <!-- Líneas verticales -->
+            <g class="chart-grid vertical-grid">
+
+                <line x1="125" y1="0" x2="125" y2="320"/>
+                <line x1="250" y1="0" x2="250" y2="320"/>
+                <line x1="375" y1="0" x2="375" y2="320"/>
+                <line x1="500" y1="0" x2="500" y2="320"/>
+                <line x1="625" y1="0" x2="625" y2="320"/>
+                <line x1="750" y1="0" x2="750" y2="320"/>
+                <line x1="875" y1="0" x2="875" y2="320"/>
+
+            </g>
+
+
+            <!-- Línea central -->
+            <line
+                class="chart-center-line"
+                x1="0"
+                y1="160"
+                x2="1000"
+                y2="160"
+            />
+
+
+            <!-- Placeholder -->
+            <text
+                id="chart-placeholder"
+                x="500"
+                y="160"
+                text-anchor="middle"
+                class="chart-placeholder"
+            >
+                Esperando suficientes lecturas...
+            </text>
+
+
+            <!-- =========================
+                 ÁREAS DEBAJO DE LAS CURVAS
+            ========================== -->
+
+            <path
+                id="temperatureArea"
+                class="temperature-area"
+                fill="url(#temperatureGradient)"
+            ></path>
+
+
+            <path
+                id="humidityArea"
+                class="humidity-area"
+                fill="url(#humidityGradient)"
+            ></path>
+
+
+            <!-- =========================
+                 LÍNEAS PRINCIPALES
+            ========================== -->
+
+            <path
+                id="temperatureLine"
+                class="temperature-line"
+                fill="none"
+                filter="url(#temperatureGlow)"
+            ></path>
+
+
+            <path
+                id="humidityLine"
+                class="humidity-line"
+                fill="none"
+                filter="url(#humidityGlow)"
+            ></path>
+
+
+            <!-- Últimos puntos -->
+            <circle
+                id="temperaturePoint"
+                class="temperature-point"
+                r="4"
+                cx="-20"
+                cy="-20"
+            ></circle>
+
+
+            <circle
+                id="humidityPoint"
+                class="humidity-point"
+                r="4"
+                cx="-20"
+                cy="-20"
+            ></circle>
+
+
+            <!-- Labels inferiores -->
+            <g class="chart-axis-labels">
+
+                <text x="0" y="308">-</text>
+                <text x="250" y="308">TIEMPO</text>
+                <text x="500" y="308">TIEMPO REAL</text>
+                <text x="750" y="308">ACTUAL</text>
+                <text x="985" y="308" text-anchor="end">AHORA</text>
+
+            </g>
+
+        </svg>
+
+    </div>
+
+</section>
+    <!-- FIN DE LA GRÁFICA DE TELEMETRÍA -->
 
 
         <!-- =========================================
