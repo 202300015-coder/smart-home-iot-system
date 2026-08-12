@@ -14,16 +14,15 @@ const int   MQTT_PORT     = 8883;
 const char* MQTT_USER     = "SERGIO";
 const char* MQTT_PASS     = "123456789";
 
-// SoftwareSerial para comunicarse con el Arduino Uno
-// RX del ESP = D5 (GPIO14) <--- Conectado a Pin 8 (TX) del Arduino Uno
-// TX del ESP = D6 (GPIO12) ---> Conectado a Pin A0/D14 (RX) del Arduino Uno
-SoftwareSerial arduinoSerial(14, 12); 
+// SoftwareSerial para comunicarse con el Arduino Uno (RX: D5, TX: D6)
+// Cambiamos de (14, 12) a (5, 4) -> D1 es RX, D2 es TX
+SoftwareSerial arduinoSerial(5, 4);
 
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
-// Buffer no bloqueante para lectura de tramas
 String tramaBuffer = "";
+unsigned long lastMqttRetry = 0; // Para reconexión NO bloqueante
 
 void setupWiFi() {
   delay(10);
@@ -39,8 +38,7 @@ void setupWiFi() {
     Serial.print(".");
   }
 
-  Serial.println("");
-  Serial.println("[WiFi] ¡Conectado con éxito!");
+  Serial.println("\n[WiFi] ¡Conectado con éxito!");
   Serial.print("[WiFi] IP Asignada: ");
   Serial.println(WiFi.localIP());
 }
@@ -66,8 +64,17 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
+// Reconexión NO bloqueante
 void reconnectMQTT() {
-  while (!client.connected()) {
+  unsigned long now = millis();
+  if (now - lastMqttRetry > 5000) { // Intenta cada 5 segundos
+    lastMqttRetry = now;
+    
+    if (WiFi.status() != WL_CONNECTED) {
+      setupWiFi();
+      return;
+    }
+
     Serial.print("[MQTT] Conectando a HiveMQ Cloud...");
     String clientId = "ESP8266_Gateway_" + String(ESP.getChipId(), HEX);
     
@@ -78,8 +85,7 @@ void reconnectMQTT() {
     } else {
       Serial.print(" Falló, rc=");
       Serial.print(client.state());
-      Serial.println(" Reintentando en 3 segundos...");
-      delay(3000);
+      Serial.println(" Reintentando en 5s...");
     }
   }
 }
@@ -91,44 +97,37 @@ void procesarTrama(String trama) {
   Serial.print("[ARDUINO -> GATEWAY] Trama recibida: ");
   Serial.println(trama);
 
-  // 1. EVALUAR ALERTAS Y PUBLICAR EN HIVEMQ
+  if (!client.connected()) return; // No intenta publicar si MQTT no está listo
+
   if (trama == "ALERT:FLAMA") {
     client.publish("CASA/FLAMA", "1");
-    Serial.println("  -> [MQTT PUB] Alerta enviada a CASA/FLAMA");
   } 
   else if (trama == "ALERT:TERREMOTO") {
     client.publish("CASA/TERREMOTO", "1");
-    Serial.println("  -> [MQTT PUB] Alerta enviada a CASA/TERREMOTO");
   } 
   else if (trama == "ALERT:PROX") {
     client.publish("CASA/PROX", "1");
-    Serial.println("  -> [MQTT PUB] Alerta enviada a CASA/PROX");
   } 
   else if (trama == "ALERT:SONIDO") {
     client.publish("CASA/SONIDO", "1");
-    Serial.println("  -> [MQTT PUB] Alerta enviada a CASA/SONIDO");
   } 
-  // 2. EVALUAR TELEMETRÍA Y PUBLICAR EN HIVEMQ
   else if (trama.startsWith("DATA:TEMP:")) {
     String val = trama.substring(10);
     client.publish("CASA/TEM", val.c_str());
-    Serial.println("  -> [MQTT PUB] Temperatura enviada: " + val);
   } 
   else if (trama.startsWith("DATA:HUM:")) {
     String val = trama.substring(9);
     client.publish("CASA/HUM", val.c_str());
-    Serial.println("  -> [MQTT PUB] Humedad enviada: " + val);
   } 
   else if (trama.startsWith("DATA:LUZ:")) {
     String val = trama.substring(9);
     client.publish("CASA/ESTADO_LUZ", val.c_str());
-    Serial.println("  -> [MQTT PUB] Estado de Luz enviado: " + val);
   }
 }
 
 void setup() {
   Serial.begin(115200);      
-  arduinoSerial.begin(9600); 
+  arduinoSerial.begin(2400); 
 
   espClient.setInsecure();   
 
@@ -140,16 +139,17 @@ void setup() {
 void loop() {
   if (!client.connected()) {
     reconnectMQTT();
+  } else {
+    client.loop();
   }
-  client.loop();
 
-  // LECTURA NO BLOQUEANTE DESDE EL ARDUINO
+  // LECTURA NO BLOQUEANTE DESDE ARDUINO
   while (arduinoSerial.available() > 0) {
     char c = (char)arduinoSerial.read();
     if (c == '\n') {
       procesarTrama(tramaBuffer);
       tramaBuffer = "";
-    } else {
+    } else if (c != '\r') {
       tramaBuffer += c;
     }
   }

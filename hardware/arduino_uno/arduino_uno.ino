@@ -96,7 +96,7 @@ void ISR_KY017_Sismo() {
 
 void setup() {
   Serial.begin(9600);      
-  espSerial.begin(9600);    
+  espSerial.begin(2400);    
 
   dht.begin();
 
@@ -299,13 +299,16 @@ void procesarComandosSerial() {
     comando.trim();
 
     if (comando.startsWith("SET_LUZ:")) {
-      int nuevoValor = comando.substring(8).toInt();
-      brilloLuzActual = constrain(nuevoValor, 0, 255);
-      ultimoBrilloPot = brilloLuzActual; 
-      
-      setKY016(brilloLuzActual);
-      Serial.println("[COMANDO ESP] Ajustar Luz KY-016 a: " + String(brilloLuzActual));
-    }
+  int pctLuz = comando.substring(8).toInt();
+  pctLuz = constrain(pctLuz, 0, 100);
+  
+  // Convertimos el porcentaje (0-100) a valor PWM de Arduino (0-255)
+  brilloLuzActual = map(pctLuz, 0, 100, 0, 255);
+  ultimoBrilloPot = brilloLuzActual; 
+  
+  setKY016(brilloLuzActual);
+  Serial.println("[COMANDO ESP] Ajustar Luz KY-016 (" + String(pctLuz) + "%) PWM: " + String(brilloLuzActual));
+}
   }
 }
 
