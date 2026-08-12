@@ -1709,3 +1709,549 @@ body::before {
     letter-spacing: 0.02em;
 
 }
+/* =========================================================
+   GRÁFICA DE TELEMETRÍA
+   Diseño Supabase / Smart Home
+========================================================= */
+
+.chart-panel {
+    margin-top: 20px;
+    overflow: hidden;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.018),
+            transparent 55%
+        ),
+        #0d0f0e;
+
+    border: 1px solid #202422;
+}
+
+
+/* =========================================================
+   HEADER DE LA GRÁFICA
+========================================================= */
+
+.chart-header {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding: 19px 20px 17px;
+
+    border-bottom: 1px solid #202422;
+}
+
+
+.chart-title-area {
+    display: flex;
+
+    align-items: center;
+
+    gap: 11px;
+}
+
+
+.chart-icon {
+    color: #3ecf8e;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(62, 207, 142, 0.13),
+            rgba(62, 207, 142, 0.035)
+        );
+
+    border-color:
+        rgba(62, 207, 142, 0.18);
+}
+
+
+.chart-title-area h2 {
+    margin: 2px 0 0;
+
+    color: #f1f3f2;
+
+    font-size: 14px;
+
+    line-height: 1.3;
+
+    font-weight: 600;
+
+    letter-spacing: -0.015em;
+}
+
+
+/* =========================================================
+   LEYENDA
+========================================================= */
+
+.chart-legend {
+    display: flex;
+
+    align-items: center;
+
+    gap: 15px;
+}
+
+
+.legend-item {
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    color: #727974;
+
+    font-family: var(--font-mono);
+
+    font-size: 9px;
+}
+
+
+.legend-line {
+    width: 18px;
+    height: 2px;
+
+    border-radius: 999px;
+}
+
+
+.legend-line.temperature {
+    background: #3ecf8e;
+
+    box-shadow:
+        0 0 8px rgba(62, 207, 142, 0.3);
+}
+
+
+.legend-line.humidity {
+    background: #61d8ff;
+
+    box-shadow:
+        0 0 8px rgba(97, 216, 255, 0.25);
+}
+
+
+.chart-live {
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    padding-left: 10px;
+
+    color: #3ecf8e;
+
+    font-family: var(--font-mono);
+
+    font-size: 8px;
+
+    letter-spacing: 0.08em;
+}
+
+
+.chart-live span {
+    width: 5px;
+    height: 5px;
+
+    border-radius: 50%;
+
+    background: #3ecf8e;
+
+    box-shadow:
+        0 0 7px rgba(62, 207, 142, 0.5);
+
+    animation:
+        chartLivePulse 1.8s ease-in-out infinite;
+}
+
+
+@keyframes chartLivePulse {
+
+    0%,
+    100% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+}
+
+
+/* =========================================================
+   ESTADÍSTICAS
+========================================================= */
+
+.chart-stats {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    border-bottom: 1px solid #202422;
+}
+
+
+.chart-stat {
+    padding: 14px 20px;
+
+    min-height: 84px;
+}
+
+
+.chart-stat + .chart-stat {
+    border-left: 1px solid #202422;
+}
+
+
+.stat-label {
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    margin-bottom: 10px;
+
+    color: #3ecf8e;
+
+    font-family: var(--font-mono);
+
+    font-size: 9px;
+
+    font-weight: 500;
+
+    letter-spacing: 0.12em;
+}
+
+
+.stat-label::before {
+    content: "";
+
+    width: 5px;
+    height: 5px;
+
+    border-radius: 50%;
+
+    background: #3ecf8e;
+
+    box-shadow:
+        0 0 7px rgba(62, 207, 142, 0.35);
+}
+
+
+.humidity-label {
+    color: #61d8ff;
+}
+
+
+.humidity-label::before {
+    background: #61d8ff;
+
+    box-shadow:
+        0 0 7px rgba(97, 216, 255, 0.35);
+}
+
+
+.stat-values {
+    display: flex;
+
+    align-items: center;
+
+    gap: 35px;
+}
+
+
+.stat-values div {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+
+.stat-values span {
+    color: #555c57;
+
+    font-family: var(--font-mono);
+
+    font-size: 8px;
+
+    letter-spacing: 0.08em;
+}
+
+
+.stat-values strong {
+    color: #d9dddb;
+
+    font-family: var(--font-mono);
+
+    font-size: 14px;
+
+    font-weight: 500;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   CONTENEDOR SVG
+========================================================= */
+
+.chart-wrap {
+    position: relative;
+
+    width: 100%;
+
+    height: 330px;
+
+    padding: 0;
+
+    overflow: hidden;
+
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(62, 207, 142, 0.012),
+            transparent 55%
+        );
+}
+
+
+.telemetry-chart {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    overflow: visible;
+}
+
+
+/* =========================================================
+   FONDO DE LA GRÁFICA
+========================================================= */
+
+.chart-background {
+    fill: rgba(7, 10, 9, 0.35);
+}
+
+
+/* =========================================================
+   REJILLA
+========================================================= */
+
+.chart-grid line {
+    stroke: rgba(255, 255, 255, 0.035);
+
+    stroke-width: 1;
+}
+
+
+.vertical-grid line {
+    stroke: rgba(255, 255, 255, 0.022);
+}
+
+
+.chart-center-line {
+    stroke:
+        rgba(62, 207, 142, 0.06);
+
+    stroke-width: 1;
+
+    stroke-dasharray: 4 7;
+}
+
+
+/* =========================================================
+   LÍNEA DE TEMPERATURA
+========================================================= */
+
+.temperature-line {
+    stroke: #3ecf8e;
+
+    stroke-width: 3;
+
+    stroke-linecap: round;
+
+    stroke-linejoin: round;
+
+    vector-effect: non-scaling-stroke;
+
+    opacity: 0.98;
+}
+
+
+/* =========================================================
+   LÍNEA DE HUMEDAD
+========================================================= */
+
+.humidity-line {
+    stroke: #61d8ff;
+
+    stroke-width: 3;
+
+    stroke-linecap: round;
+
+    stroke-linejoin: round;
+
+    vector-effect: non-scaling-stroke;
+
+    opacity: 0.95;
+}
+
+
+/* =========================================================
+   ÁREAS
+========================================================= */
+
+.temperature-area {
+    opacity: 0.75;
+
+    pointer-events: none;
+}
+
+
+.humidity-area {
+    opacity: 0.55;
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   ÚLTIMOS PUNTOS
+========================================================= */
+
+.temperature-point {
+    fill: #0d0f0e;
+
+    stroke: #3ecf8e;
+
+    stroke-width: 3;
+
+    filter:
+        drop-shadow(
+            0 0 5px rgba(62, 207, 142, 0.5)
+        );
+}
+
+
+.humidity-point {
+    fill: #0d0f0e;
+
+    stroke: #61d8ff;
+
+    stroke-width: 3;
+
+    filter:
+        drop-shadow(
+            0 0 5px rgba(97, 216, 255, 0.45)
+        );
+}
+
+
+/* =========================================================
+   PLACEHOLDER
+========================================================= */
+
+.chart-placeholder {
+    fill: #555c57;
+
+    font-family: var(--font-mono);
+
+    font-size: 11px;
+
+    letter-spacing: 0.02em;
+}
+
+
+/* =========================================================
+   LABELS INFERIORES
+========================================================= */
+
+.chart-axis-labels text {
+    fill: #3f4642;
+
+    font-family: var(--font-mono);
+
+    font-size: 8px;
+
+    letter-spacing: 0.06em;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 760px) {
+
+    .chart-header {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+
+    .chart-legend {
+        width: 100%;
+
+        justify-content: flex-start;
+    }
+
+
+    .chart-wrap {
+        height: 300px;
+    }
+
+
+    .stat-values {
+        gap: 20px;
+    }
+
+}
+
+
+@media (max-width: 520px) {
+
+    .chart-stats {
+        grid-template-columns: 1fr;
+    }
+
+
+    .chart-stat + .chart-stat {
+        border-left: none;
+
+        border-top: 1px solid #202422;
+    }
+
+
+    .chart-wrap {
+        height: 270px;
+    }
+
+
+    .chart-legend {
+        flex-wrap: wrap;
+
+        gap: 10px;
+    }
+
+
+    .stat-values {
+        gap: 25px;
+    }
+
+}
