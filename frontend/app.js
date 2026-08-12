@@ -20,7 +20,9 @@ const humMax = document.getElementById('humMaxValue');
 const humMid = document.getElementById('humMidValue');
 const humMin = document.getElementById('humMinValue');
 
-// Eventos de Socket.io
+// ===================================================
+// EVENTOS DE SOCKET.IO
+// ===================================================
 socket.on('connect', () => {
   if (statusEl) {
     statusEl.setAttribute('data-state', 'connected');
@@ -38,6 +40,7 @@ socket.on('disconnect', () => {
 socket.on('mqtt_data', (data) => {
   const { topic, payload } = data;
 
+  // 1. TELEMETRÍA Y GRÁFICAS EN TIEMPO REAL
   if (topic === 'CHART_UPDATE') {
     if (payload.temperature !== null && tempEl) tempEl.textContent = payload.temperature;
     if (payload.humidity !== null && humEl) humEl.textContent = payload.humidity;
@@ -49,13 +52,74 @@ socket.on('mqtt_data', (data) => {
   } else if (topic === 'CASA/ESTADO_LUZ' && luzValEl) {
     luzValEl.textContent = payload;
   }
+
+  // 2. MANEJO DE ALERTAS ESPECIALES EN TIEMPO REAL
+  switch (topic) {
+    case 'CASA/FLAMA':
+      mostrarAlertaWeb('🔥 ¡ALERTA DE FUEGO!', 'Se ha detectado flama en la propiedad.', 'danger');
+      break;
+
+    case 'CASA/TERREMOTO':
+      mostrarAlertaWeb('⚠️ ¡ALERTA SISMO!', 'Se detectaron vibraciones anormales / terremoto.', 'warning');
+      break;
+
+    case 'CASA/PROX':
+      mostrarAlertaWeb('🚪 PUERTA ABIERTA', 'La puerta principal ha sido abierta (imán separado).', 'info');
+      break;
+
+    case 'CASA/SONIDO':
+      mostrarAlertaWeb('🔊 RUIDO ELEVADO', 'Se detectó un impacto o ruido fuerte.', 'warning');
+      break;
+  }
 });
 
-// Enviar comandos de dimerización
+// ===================================================
+// CONTROL DE DIMERIZACIÓN DE LUZ
+// ===================================================
 if (sliderLuz) {
   sliderLuz.addEventListener('change', (e) => {
     socket.emit('set_luz', e.target.value);
   });
+}
+
+// ===================================================
+// NOTIFICACIONES Y ALERTAS EN PANTALLA
+// ===================================================
+function mostrarAlertaWeb(titulo, mensaje, tipo) {
+  let contenedor = document.getElementById('alertas-container');
+  if (!contenedor) {
+    contenedor = document.createElement('div');
+    contenedor.id = 'alertas-container';
+    contenedor.style.position = 'fixed';
+    contenedor.style.top = '20px';
+    contenedor.style.right = '20px';
+    contenedor.style.zIndex = '9999';
+    document.body.appendChild(contenedor);
+  }
+
+  const colorFondo = tipo === 'danger' ? '#ef4444' : (tipo === 'warning' ? '#f59e0b' : '#3b82f6');
+
+  const alertaCard = document.createElement('div');
+  alertaCard.style.backgroundColor = colorFondo;
+  alertaCard.style.color = '#ffffff';
+  alertaCard.style.padding = '16px 20px';
+  alertaCard.style.marginBottom = '10px';
+  alertaCard.style.borderRadius = '8px';
+  alertaCard.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+  alertaCard.style.transition = 'all 0.3s ease';
+  alertaCard.style.fontFamily = 'sans-serif';
+
+  alertaCard.innerHTML = `
+    <strong style="display:block; font-size: 1.1em;">${titulo}</strong>
+    <span style="font-size: 0.9em;">${mensaje}</span>
+  `;
+
+  contenedor.appendChild(alertaCard);
+
+  setTimeout(() => {
+    alertaCard.style.opacity = '0';
+    setTimeout(() => alertaCard.remove(), 300);
+  }, 5000);
 }
 
 // ===================================================
@@ -68,7 +132,6 @@ function scaleFor(values, minSpan = 2.0) {
   let min = Math.min(...valid);
   let max = Math.max(...valid);
 
-  // Forzar un rango mínimo absoluto para evitar líneas totalmente planas o oscilaciones gigantes
   if (max - min < minSpan) {
     const center = (max + min) / 2;
     min = center - (minSpan / 2);
@@ -78,7 +141,6 @@ function scaleFor(values, minSpan = 2.0) {
   return { min, max, range: max - min };
 }
 
-// Genera un D-path suavizado mediante curvas Bézier cúbicas
 function lineForBezier(points) {
   if (points.length === 0) return '';
   if (points.length === 1) return `M ${points[0].x},${points[0].y}`;
@@ -118,10 +180,9 @@ function renderChart(history) {
   const temps = history.map(h => h.temperature);
   const hums = history.map(h => h.humidity);
 
-  const scaleTemp = scaleFor(temps, 2.0); // Mínimo 2°C de ventana
-  const scaleHum = scaleFor(hums, 5.0);   // Mínimo 5% de ventana
+  const scaleTemp = scaleFor(temps, 2.0);
+  const scaleHum = scaleFor(hums, 5.0);
 
-  // Actualizar métricas textuales en el SVG
   if (tempMax) tempMax.textContent = scaleTemp.max.toFixed(1) + '°C';
   if (tempMid) tempMid.textContent = ((scaleTemp.max + scaleTemp.min) / 2).toFixed(1) + '°C';
   if (tempMin) tempMin.textContent = scaleTemp.min.toFixed(1) + '°C';
