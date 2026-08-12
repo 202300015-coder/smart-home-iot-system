@@ -1,6 +1,8 @@
 const socket = io();
 
-// Elementos DOM
+// ===================================================
+// ELEMENTOS DEL DOM
+// ===================================================
 const tempEl = document.getElementById('temp');
 const humEl = document.getElementById('hum');
 const luzValEl = document.getElementById('luz-val');
@@ -12,7 +14,7 @@ const tempPath = document.getElementById('temperatureLine');
 const humPath = document.getElementById('humidityLine');
 const placeholder = document.getElementById('chart-placeholder');
 
-// Textos de min, mid, max
+// Textos de Min, Mid, Max de la Gráfica
 const tempMax = document.getElementById('tempMaxValue');
 const tempMid = document.getElementById('tempMidValue');
 const tempMin = document.getElementById('tempMinValue');
@@ -20,8 +22,13 @@ const humMax = document.getElementById('humMaxValue');
 const humMid = document.getElementById('humMidValue');
 const humMin = document.getElementById('humMinValue');
 
+// Referencias del Registro de Alertas (Logs)
+const alertasList = document.getElementById('alertas-list');
+const emptyState = document.getElementById('alerta-empty-state');
+const btnLimpiar = document.getElementById('btn-limpiar-alertas');
+
 // ===================================================
-// EVENTOS DE SOCKET.IO
+// EVENTOS DE SOCKET.IO Y TELEMETRÍA EN VIVO
 // ===================================================
 socket.on('connect', () => {
   if (statusEl) {
@@ -40,7 +47,7 @@ socket.on('disconnect', () => {
 socket.on('mqtt_data', (data) => {
   const { topic, payload } = data;
 
-  // 1. TELEMETRÍA Y GRÁFICAS EN TIEMPO REAL
+  // 1. PROCESAMIENTO DE TELEMETRÍA Y GRÁFICAS
   if (topic === 'CHART_UPDATE') {
     if (payload.temperature !== null && tempEl) tempEl.textContent = payload.temperature;
     if (payload.humidity !== null && humEl) humEl.textContent = payload.humidity;
@@ -53,28 +60,28 @@ socket.on('mqtt_data', (data) => {
     luzValEl.textContent = payload;
   }
 
-  // 2. MANEJO DE ALERTAS ESPECIALES EN TIEMPO REAL
+  // 2. REGISTRO DE LOGS DE ALERTAS EN TIEMPO REAL
   switch (topic) {
     case 'CASA/FLAMA':
-      mostrarAlertaWeb('🔥 ¡ALERTA DE FUEGO!', 'Se ha detectado flama en la propiedad.', 'danger');
+      agregarLogAlerta('🔥 ¡ALERTA DE FUEGO!', 'Se detectó presencia de flama en el sensor.', 'danger');
       break;
 
     case 'CASA/TERREMOTO':
-      mostrarAlertaWeb('⚠️ ¡ALERTA SISMO!', 'Se detectaron vibraciones anormales / terremoto.', 'warning');
+      agregarLogAlerta('⚠️ ¡ALERTA SISMO!', 'Vibración o impacto sísmico registrado.', 'warning');
       break;
 
     case 'CASA/PROX':
-      mostrarAlertaWeb('🚪 PUERTA ABIERTA', 'La puerta principal ha sido abierta (imán separado).', 'info');
+      agregarLogAlerta('🚪 PUERTA ABIERTA', 'La puerta fue abierta (sensor magnético).', 'info');
       break;
 
     case 'CASA/SONIDO':
-      mostrarAlertaWeb('🔊 RUIDO ELEVADO', 'Se detectó un impacto o ruido fuerte.', 'warning');
+      agregarLogAlerta('🔊 RUIDO ELEVADO', 'Se detectó un pico de sonido o impacto.', 'warning');
       break;
   }
 });
 
 // ===================================================
-// CONTROL DE DIMERIZACIÓN DE LUZ
+// CONTROL DE LUZ DESDE EL SLIDER
 // ===================================================
 if (sliderLuz) {
   sliderLuz.addEventListener('change', (e) => {
@@ -83,43 +90,72 @@ if (sliderLuz) {
 }
 
 // ===================================================
-// NOTIFICACIONES Y ALERTAS EN PANTALLA
+// LÓGICA DEL REGISTRO DE ALERTAS (HISTORIAL Y LIMPIEZA)
 // ===================================================
-function mostrarAlertaWeb(titulo, mensaje, tipo) {
-  let contenedor = document.getElementById('alertas-container');
-  if (!contenedor) {
-    contenedor = document.createElement('div');
-    contenedor.id = 'alertas-container';
-    contenedor.style.position = 'fixed';
-    contenedor.style.top = '20px';
-    contenedor.style.right = '20px';
-    contenedor.style.zIndex = '9999';
-    document.body.appendChild(contenedor);
+function agregarLogAlerta(titulo, mensaje, tipo) {
+  if (!alertasList) return;
+
+  // Ocultar el estado "Todo está tranquilo" cuando llega una alerta
+  if (emptyState) {
+    emptyState.style.display = 'none';
   }
 
-  const colorFondo = tipo === 'danger' ? '#ef4444' : (tipo === 'warning' ? '#f59e0b' : '#3b82f6');
+  // Obtener la hora actual en formato HH:MM AM/PM
+  const ahora = new Date();
+  const horaFormateada = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  const alertaCard = document.createElement('div');
-  alertaCard.style.backgroundColor = colorFondo;
-  alertaCard.style.color = '#ffffff';
-  alertaCard.style.padding = '16px 20px';
-  alertaCard.style.marginBottom = '10px';
-  alertaCard.style.borderRadius = '8px';
-  alertaCard.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-  alertaCard.style.transition = 'all 0.3s ease';
-  alertaCard.style.fontFamily = 'sans-serif';
+  // Asignación de colores según la severidad
+  const colorBorde = tipo === 'danger' ? '#ef4444' : (tipo === 'warning' ? '#f59e0b' : '#3b82f6');
 
-  alertaCard.innerHTML = `
-    <strong style="display:block; font-size: 1.1em;">${titulo}</strong>
-    <span style="font-size: 0.9em;">${mensaje}</span>
+  // Crear la tarjeta del Log de Alerta
+  const logCard = document.createElement('div');
+  logCard.className = 'alert-log-item';
+  logCard.style.cssText = `
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border-left: 4px solid ${colorBorde};
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    color: #fff;
+    font-family: monospace;
+    font-size: 0.9em;
   `;
 
-  contenedor.appendChild(alertaCard);
+  logCard.innerHTML = `
+    <div>
+      <strong style="color: ${colorBorde}; font-size: 1em;">${titulo}</strong>
+      <p style="margin: 2px 0 0 0; opacity: 0.8; font-size: 0.85em;">${mensaje}</p>
+    </div>
+    <span style="opacity: 0.5; font-size: 0.8em; white-space: nowrap; margin-left: 10px;">${horaFormateada}</span>
+  `;
 
-  setTimeout(() => {
-    alertaCard.style.opacity = '0';
-    setTimeout(() => alertaCard.remove(), 300);
-  }, 5000);
+  // Insertar al inicio de la lista (el más reciente arriba)
+  alertasList.insertBefore(logCard, alertasList.firstChild);
+
+  // Límite de máximo 5 alertas visibles en pantalla
+  const logsActuales = alertasList.querySelectorAll('.alert-log-item');
+  if (logsActuales.length > 5) {
+    alertasList.removeChild(logsActuales[logsActuales.length - 1]);
+  }
+}
+
+// Evento para limpiar todos los registros
+if (btnLimpiar) {
+  btnLimpiar.addEventListener('click', () => {
+    if (!alertasList) return;
+
+    // Eliminar los elementos agregados
+    const logs = alertasList.querySelectorAll('.alert-log-item');
+    logs.forEach(log => log.remove());
+
+    // Volver a mostrar el estado "Todo está tranquilo"
+    if (emptyState) {
+      emptyState.style.display = 'flex';
+    }
+  });
 }
 
 // ===================================================
