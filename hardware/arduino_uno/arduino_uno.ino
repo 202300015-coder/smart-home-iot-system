@@ -273,29 +273,30 @@ void leerSensores() {
   }
 }
 
-// Variable global nueva para evitar que el pot pisotee la orden de la Web
-unsigned long timerIgnorarPot = 0; 
-
+int lecturaPotPrevia = -1; // Guarda la posición física cruda del potenciómetro
+// ==================== LEER POTENCIÓMETRO ====================
 // ==================== LEER POTENCIÓMETRO ====================
 void leerPotenciometro() {
   if (millis() - timerPot < 150) return;
   timerPot = millis();
 
-  // Si se envió un comando desde la web en los últimos 3 segundos,
-  // se ignora la lectura estática del potenciómetro físico.
-  if (millis() - timerIgnorarPot < 3000) return;
-
   int lecturaRaw = leerAnalogicoLimpio(PIN_POTENTIOMETER);
-  int valPWM = map(lecturaRaw, 0, 1023, 0, 255);
 
-  // Solo si mueves FÍSICAMENTE el potenciómetro de forma clara (cambio >= 15) toma el control manual
-  if (abs(valPWM - ultimoBrilloPot) >= 15) { 
-    ultimoBrilloPot = valPWM;
+  // Inicializar la lectura previa en la primera ejecución
+  if (lecturaPotPrevia == -1) {
+    lecturaPotPrevia = lecturaRaw;
+  }
+
+  // Detectar si la PERILLA FÍSICA fue girada intencionalmente (ignorando ruido eléctrico)
+  if (abs(lecturaRaw - lecturaPotPrevia) >= 30) { 
+    lecturaPotPrevia = lecturaRaw; // Actualizar la posición física del potenciómetro
+    
+    int valPWM = map(lecturaRaw, 0, 1023, 0, 255);
     brilloLuzActual = valPWM;
     
     setKY016(brilloLuzActual);
     
-    Serial.println("[POT] Brillo KY-016 (Pin 11): " + String(brilloLuzActual));
+    Serial.println("[POT] Brillo manual KY-016 (Pin 11): " + String(brilloLuzActual));
     espSerial.println("DATA:LUZ:" + String(brilloLuzActual));
   }
 }
@@ -309,14 +310,12 @@ void procesarComandosSerial() {
       int pctLuz = comando.substring(8).toInt();
       pctLuz = constrain(pctLuz, 0, 100);
       
-      // Mapeo correcto de Porcentaje (0-100%) a PWM (0-255)
+      // Convertir Porcentaje (0-100) a PWM (0-255)
       brilloLuzActual = map(pctLuz, 0, 100, 0, 255);
       
-      // Actualizamos el registro y pausamos el potenciómetro 3 segundos
-      ultimoBrilloPot = brilloLuzActual; 
-      timerIgnorarPot = millis(); 
-      
+      // Aplicar el brillo directamente sin modificar la posición del potenciómetro físico
       setKY016(brilloLuzActual);
+      
       Serial.println("[COMANDO ESP] Ajustar Luz KY-016 (" + String(pctLuz) + "%) PWM: " + String(brilloLuzActual));
     }
   }

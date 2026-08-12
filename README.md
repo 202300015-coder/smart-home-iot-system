@@ -81,3 +81,5 @@ El proyecto está dividido en tres capas:
 - Hardware: incluye los sensores y microcontroladores encargados de detectar eventos y enviar información.
 
 Esto permite un sistema IoT completo donde los dispositivos físicos, el servidor y la interfaz visual trabajan juntos para monitorear y controlar una casa inteligente.
+
+TODO ES FUNCIONAL SOLAMNETE LO ARROJA COMO NOTIFICACIONES
