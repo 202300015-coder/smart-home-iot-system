@@ -273,15 +273,23 @@ void leerSensores() {
   }
 }
 
+// Variable global nueva para evitar que el pot pisotee la orden de la Web
+unsigned long timerIgnorarPot = 0; 
+
 // ==================== LEER POTENCIÓMETRO ====================
 void leerPotenciometro() {
   if (millis() - timerPot < 150) return;
   timerPot = millis();
 
+  // Si se envió un comando desde la web en los últimos 3 segundos,
+  // se ignora la lectura estática del potenciómetro físico.
+  if (millis() - timerIgnorarPot < 3000) return;
+
   int lecturaRaw = leerAnalogicoLimpio(PIN_POTENTIOMETER);
   int valPWM = map(lecturaRaw, 0, 1023, 0, 255);
 
-  if (abs(valPWM - ultimoBrilloPot) >= 8) { 
+  // Solo si mueves FÍSICAMENTE el potenciómetro de forma clara (cambio >= 15) toma el control manual
+  if (abs(valPWM - ultimoBrilloPot) >= 15) { 
     ultimoBrilloPot = valPWM;
     brilloLuzActual = valPWM;
     
@@ -291,7 +299,6 @@ void leerPotenciometro() {
     espSerial.println("DATA:LUZ:" + String(brilloLuzActual));
   }
 }
-
 // ==================== RECEPCIÓN ESP8266 ====================
 void procesarComandosSerial() {
   if (espSerial.available()) {
@@ -299,16 +306,19 @@ void procesarComandosSerial() {
     comando.trim();
 
     if (comando.startsWith("SET_LUZ:")) {
-  int pctLuz = comando.substring(8).toInt();
-  pctLuz = constrain(pctLuz, 0, 100);
-  
-  // Convertimos el porcentaje (0-100) a valor PWM de Arduino (0-255)
-  brilloLuzActual = map(pctLuz, 0, 100, 0, 255);
-  ultimoBrilloPot = brilloLuzActual; 
-  
-  setKY016(brilloLuzActual);
-  Serial.println("[COMANDO ESP] Ajustar Luz KY-016 (" + String(pctLuz) + "%) PWM: " + String(brilloLuzActual));
-}
+      int pctLuz = comando.substring(8).toInt();
+      pctLuz = constrain(pctLuz, 0, 100);
+      
+      // Mapeo correcto de Porcentaje (0-100%) a PWM (0-255)
+      brilloLuzActual = map(pctLuz, 0, 100, 0, 255);
+      
+      // Actualizamos el registro y pausamos el potenciómetro 3 segundos
+      ultimoBrilloPot = brilloLuzActual; 
+      timerIgnorarPot = millis(); 
+      
+      setKY016(brilloLuzActual);
+      Serial.println("[COMANDO ESP] Ajustar Luz KY-016 (" + String(pctLuz) + "%) PWM: " + String(brilloLuzActual));
+    }
   }
 }
 
