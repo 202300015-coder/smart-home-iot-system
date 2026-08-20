@@ -63,19 +63,19 @@ socket.on('mqtt_data', (data) => {
   // 2. REGISTRO DE LOGS DE ALERTAS EN TIEMPO REAL
   switch (topic) {
     case 'CASA/FLAMA':
-      agregarLogAlerta('🔥 ¡ALERTA DE FUEGO!', 'Se detectó presencia de flama en el sensor.', 'danger');
+      agregarLogAlerta(' ¡ALERTA DE FUEGO!', 'Se detectó presencia de flama en el sensor.', 'danger');
       break;
 
     case 'CASA/TERREMOTO':
-      agregarLogAlerta('⚠️ ¡ALERTA SISMO!', 'Vibración o impacto sísmico registrado.', 'warning');
+      agregarLogAlerta(' ¡ALERTA SISMO!', 'Vibración o impacto sísmico registrado.', 'warning');
       break;
 
     case 'CASA/PROX':
-      agregarLogAlerta('🚪 PUERTA ABIERTA', 'La puerta fue abierta (sensor magnético).', 'info');
+      agregarLogAlerta(' PUERTA ABIERTA', 'La puerta fue abierta (sensor magnético).', 'info');
       break;
 
     case 'CASA/SONIDO':
-      agregarLogAlerta('🔊 RUIDO ELEVADO', 'Se detectó un pico de sonido o impacto.', 'warning');
+      agregarLogAlerta(' RUIDO ELEVADO', 'Se detectó un pico de sonido o impacto.', 'warning');
       break;
   }
 });
